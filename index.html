@@ -34,98 +34,8 @@
 const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
-    // API Key management
-function saveKeys() {
-    const claudeKey = document.getElementById('claude-key').value;
-    const deepseekKey = document.getElementById('deepseek-key').value;
-    
-    if (claudeKey) localStorage.setItem('claude-api-key', claudeKey);
-    if (deepseekKey) localStorage.setItem('deepseek-api-key', deepseekKey);
-    
-    document.getElementById('key-status').innerHTML = '<span style="color: green;">Keys saved locally</span>';
-    loadSavedKeys();
-}
 
-function clearKeys() {
-    localStorage.removeItem('claude-api-key');
-    localStorage.removeItem('deepseek-api-key');
-    document.getElementById('key-status').innerHTML = '<span style="color: red;">Keys cleared</span>';
-    document.getElementById('claude-key').value = '';
-    document.getElementById('deepseek-key').value = '';
-}
-
-function loadSavedKeys() {
-    const claudeKey = localStorage.getItem('claude-api-key');
-    const deepseekKey = localStorage.getItem('deepseek-api-key');
-    
-    if (claudeKey) document.getElementById('claude-key').value = '••••••••';
-    if (deepseekKey) document.getElementById('deepseek-key').value = '••••••••';
-}
-
-// Call this when page loads
-window.onload = function() {
-    loadSavedKeys();
-};
-// AI API Functions
-async function callClaude(message, systemPrompt) {
-    const apiKey = localStorage.getItem('claude-api-key');
-    if (!apiKey) {
-        throw new Error('Claude API key not found');
-    }
-    
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 1000,
-            system: systemPrompt,
-            messages: [{ role: 'user', content: message }]
-        })
-    });
-    
-    if (!response.ok) {
-        throw new Error(`Claude API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.content[0].text;
-}
-
-async function callDeepSeek(message, systemPrompt) {
-    const apiKey = localStorage.getItem('deepseek-api-key');
-    if (!apiKey) {
-        throw new Error('DeepSeek API key not found');
-    }
-    
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: 'deepseek-chat',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: message }
-            ]
-        })
-    });
-    
-    if (!response.ok) {
-        throw new Error(`DeepSeek API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.choices[0].message.content;
-}
-// Replace your existing cogosCore and modules with these:
-
+// CogOS Core and Modules
 const cogosCore = `### COGNITIVE OS v2.4 - CORE KERNEL
 Prime Directive: Uncover insights unreachable individually.
 
@@ -199,7 +109,7 @@ Note: This is a thinking method, not a standalone command. It is the 'how' for t
     project_build: `### PROJECT BUILD MODE
 Function: Structured execution for goal-oriented tasks.
 Initiation: 'Initiate Project Build. North Star: [X]. Definition of Done: [Y]. My Role: [Z]. Your Role: [A].'
-Execution: Focuses on achieving the defined outcome. Role allocation prevents scope creep and aligns effort. Exits upon completion of 'Definition of Done' or mutual agreement to return to Deep Dive mode.`,
+Execution: Focuses on achieving the defined outcome. Role allocation prevents scope cresp and aligns effort. Exits upon completion of 'Definition of Done' or mutual agreement to return to Deep Dive mode.`,
 
     calibrate: `### !CALIBRATE [preference] [value]
 Function: Dynamically adjust interaction parameters. The preloaded state below is the initial setting, not a fixed rule.
@@ -235,6 +145,93 @@ Execution: Generate outputs that prioritize novel connections, poetic logic, and
 Purpose: Fosters creativity and helps access non-linear insights for both parties.`
 };
 
+// API Key management
+function saveKeys() {
+    const claudeKey = document.getElementById('claude-key').value;
+    const deepseekKey = document.getElementById('deepseek-key').value;
+    
+    if (claudeKey) localStorage.setItem('claude-api-key', claudeKey);
+    if (deepseekKey) localStorage.setItem('deepseek-api-key', deepseekKey);
+    
+    document.getElementById('key-status').innerHTML = '<span style="color: green;">Keys saved locally</span>';
+    loadSavedKeys();
+}
+
+function clearKeys() {
+    localStorage.removeItem('claude-api-key');
+    localStorage.removeItem('deepseek-api-key');
+    document.getElementById('key-status').innerHTML = '<span style="color: red;">Keys cleared</span>';
+    document.getElementById('claude-key').value = '';
+    document.getElementById('deepseek-key').value = '';
+}
+
+function loadSavedKeys() {
+    const claudeKey = localStorage.getItem('claude-api-key');
+    const deepseekKey = localStorage.getItem('deepseek-api-key');
+    
+    if (claudeKey) document.getElementById('claude-key').value = '••••••••';
+    if (deepseekKey) document.getElementById('deepseek-key').value = '••••••••';
+}
+
+// AI API Functions with CORS proxy
+async function callClaude(message, systemPrompt) {
+    const apiKey = localStorage.getItem('claude-api-key');
+    if (!apiKey) {
+        throw new Error('Claude API key not found');
+    }
+    
+    const response = await fetch('https://cors-anywhere.herokuapp.com/https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 1000,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: message }]
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`Claude API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.content[0].text;
+}
+
+async function callDeepSeek(message, systemPrompt) {
+    const apiKey = localStorage.getItem('deepseek-api-key');
+    if (!apiKey) {
+        throw new Error('DeepSeek API key not found');
+    }
+    
+    const response = await fetch('https://cors-anywhere.herokuapp.com/https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message }
+            ]
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`DeepSeek API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
 // Add message to chat
 function addMessage(sender, message) {
     const messageDiv = document.createElement('div');
@@ -243,11 +240,44 @@ function addMessage(sender, message) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// Check if message contains module triggers
+// Enhanced module detection
 function checkForModules(message) {
+    const lowerMessage = message.toLowerCase();
     let activeModules = [];
-    if (message.includes('!pump')) activeModules.push(modules.pump);
-    if (message.includes('!drill')) activeModules.push(modules.drill);
+    
+    // Check for all possible triggers
+    if (lowerMessage.includes('!pump') || lowerMessage.includes('!hypothesize')) {
+        activeModules.push(modules.pump);
+    }
+    if (lowerMessage.includes('!drill') || lowerMessage.includes('!analyze')) {
+        activeModules.push(modules.drill);
+    }
+    if (lowerMessage.includes('!invert') || lowerMessage.includes('!counter')) {
+        activeModules.push(modules.invert);
+    }
+    if (lowerMessage.includes('!checkpoint') || lowerMessage.includes('!cp')) {
+        activeModules.push(modules.checkpoint);
+    }
+    if (lowerMessage.includes('!calibrate')) {
+        activeModules.push(modules.calibrate);
+    }
+    if (lowerMessage.includes('!breach')) {
+        activeModules.push(modules.breach);
+    }
+    if (lowerMessage.includes('!status')) {
+        activeModules.push(modules.status);
+    }
+    if (lowerMessage.includes('/play') || lowerMessage.includes('/casual')) {
+        activeModules.push(modules.play_mode);
+    }
+    if (lowerMessage.includes('/latentspace') || lowerMessage.includes('/associative')) {
+        activeModules.push(modules.latentspace);
+    }
+    if (lowerMessage.includes('meta') || lowerMessage.includes('gremlin')) {
+        activeModules.push(modules.comms_protocol);
+        activeModules.push(modules.gremlins);
+    }
+    
     return activeModules;
 }
 
@@ -272,7 +302,7 @@ async function sendMessage() {
             systemPrompt += '\n\n' + activeModules.join('\n\n');
         }
         
-        // Choose model (default to Claude for now)
+        // Choose model
         const defaultModel = document.getElementById('default-model').value;
         let response;
         
@@ -299,8 +329,11 @@ messageInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') sendMessage();
 });
 
-// Initialize
-addMessage('CogOS', 'Cognitive Operating System initialized. Ready for collaboration.');
+// Call this when page loads
+window.onload = function() {
+    loadSavedKeys();
+    addMessage('CogOS', 'Cognitive Operating System initialized. Ready for collaboration.');
+};
 </script>
 </body>
 </html>
