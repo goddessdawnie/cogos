@@ -211,16 +211,11 @@ function loadSavedKeys() {
 }
 
 // AI API Functions
-async function callQwen(conversationHistory, systemPrompt) {
+async function callQwen(message, systemPrompt) {
     const apiKey = localStorage.getItem('openrouter-api-key');
     if (!apiKey) {
         throw new Error('OpenRouter API key not found');
     }
-    
-    const messages = [
-        { role: 'system', content: systemPrompt },
-        ...conversationHistory
-    ];
     
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -232,7 +227,10 @@ async function callQwen(conversationHistory, systemPrompt) {
         },
         body: JSON.stringify({
             model: 'qwen/qwen-2.5-72b-instruct',
-            messages: messages
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message }
+            ]
         })
     });
     
@@ -244,16 +242,11 @@ async function callQwen(conversationHistory, systemPrompt) {
     return data.choices[0].message.content;
 }
 
-async function callDeepSeek(conversationHistory, systemPrompt) {
+async function callDeepSeek(message, systemPrompt) {
     const apiKey = localStorage.getItem('deepseek-api-key');
     if (!apiKey) {
         throw new Error('DeepSeek API key not found');
     }
-    
-    const messages = [
-        { role: 'system', content: systemPrompt },
-        ...conversationHistory
-    ];
     
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
@@ -263,7 +256,10 @@ async function callDeepSeek(conversationHistory, systemPrompt) {
         },
         body: JSON.stringify({
             model: 'deepseek-chat',
-            messages: messages
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message }
+            ]
         })
     });
     
