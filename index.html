@@ -558,7 +558,17 @@ async function sendMessage() {
         if (activeModules.length > 0) {
             systemPrompt += '\n\n' + activeModules.join('\n\n');
         }
-        
+// Add conversation context to system prompt (simple approach)
+if (currentSession.messages.length > 0) {
+    const recentMessages = currentSession.messages.slice(-6); // Last 6 messages
+    let contextText = "\n\nCONVERSATION CONTEXT:\n";
+    recentMessages.forEach(msg => {
+        if (msg.sender !== 'CogOS' && !msg.content.includes('🤔')) {
+            contextText += `${msg.sender}: ${msg.content}\n`;
+        }
+    });
+    systemPrompt += contextText;
+}        
         // Choose model
         const defaultModel = document.getElementById('default-model').value;
         currentSession.activeModel = defaultModel;
@@ -591,7 +601,7 @@ messageInput.addEventListener('keypress', function(e) {
 window.onload = function() {
     loadSavedKeys();
     updateSessionsList();
-    addMessage('CogOS', 'Cognitive Operating System initialized. Web V2.0 with Session Management. Ready for collaboration.');
+    addMessage('CogOS', 'Cognitive Operating System initialized. Web V2.1 with Session Management. Ready for collaboration.');
 };
 </script>
 </body>
