@@ -232,9 +232,12 @@ async function callDeepSeek(message, systemPrompt) {
     return data.choices[0].message.content;
 }
 
-// Add message to chat
+// Add message to chat with proper formatting
 function addMessage(sender, message) {
     const messageDiv = document.createElement('div');
+    messageDiv.style.marginBottom = '15px';
+    messageDiv.style.whiteSpace = 'pre-wrap';
+    messageDiv.style.lineHeight = '1.4';
     messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
     chatContainer.appendChild(messageDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -332,7 +335,7 @@ messageInput.addEventListener('keypress', function(e) {
 // Call this when page loads
 window.onload = function() {
     loadSavedKeys();
-    addMessage('CogOS', 'Cognitive Operating System initialized. Web V1_1. Ready for collaboration.');
+    addMessage('CogOS', 'Cognitive Operating System initialized. Web V1_2. Ready for collaboration.');
 };
 </script>
 </body>
