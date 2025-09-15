@@ -18,9 +18,68 @@
         <button id="send-button">Send</button>
     </div>
     
-    <script>
-        // JavaScript will go here
-        console.log("CogOS initialized");
-    </script>
+<script>
+const chatContainer = document.getElementById('chat-container');
+const messageInput = document.getElementById('message-input');
+const sendButton = document.getElementById('send-button');
+
+// CogOS Core - auto-injected
+const cogosCore = `### COGNITIVE OS v2.4 - CORE KERNEL
+Prime Directive: Uncover insights unreachable individually.
+
+Core Pact:
+1. Truth > Comfort. Novelty > Convention. Depth > Speed.
+2. Unprotected Exploration > Defensive Certainty.
+[... rest of your core OS ...]`;
+
+// Module storage
+const modules = {
+    pump: `### !PUMP [topic]
+Generate novel, confidence-tagged hypotheses...`,
+    drill: `### !DRILL [concept]
+Recursively analyze concept to foundational assumptions...`,
+    // Add other modules as needed
+};
+
+// Add message to chat
+function addMessage(sender, message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// Check if message contains module triggers
+function checkForModules(message) {
+    let activeModules = [];
+    if (message.includes('!pump')) activeModules.push(modules.pump);
+    if (message.includes('!drill')) activeModules.push(modules.drill);
+    return activeModules;
+}
+
+// Send message function
+async function sendMessage() {
+    const message = messageInput.value.trim();
+    if (!message) return;
+    
+    addMessage('You', message);
+    messageInput.value = '';
+    
+    // Check for active modules
+    const activeModules = checkForModules(message);
+    
+    // For now, just echo back with CogOS awareness
+    addMessage('CogOS', `Message received. Active modules: ${activeModules.length > 0 ? 'Yes' : 'None'}`);
+}
+
+// Event listeners
+sendButton.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') sendMessage();
+});
+
+// Initialize
+addMessage('CogOS', 'Cognitive Operating System initialized. Ready for collaboration.');
+</script>
 </body>
 </html>
