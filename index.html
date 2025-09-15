@@ -235,6 +235,8 @@ async function callDeepSeek(message, systemPrompt) {
 // Add message to chat
 function addMessage(sender, message) {
     const messageDiv = document.createElement('div');
+    messageDiv.style.marginBottom = '10px';
+    messageDiv.style.whiteSpace = 'pre-wrap'; // Preserves line breaks
     messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
     chatContainer.appendChild(messageDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
