@@ -594,8 +594,7 @@ if (currentSession.messages.length > 0) {
 // Event listeners
 sendButton.addEventListener('click', sendMessage);
 messageInput.addEventListener('keydown', function(e) {
-    console.log('Key pressed:', e.key, 'Ctrl:', e.ctrlKey); // Debug line
-    if (e.key === 'Enter' && e.ctrlKey) {
+    if (e.ctrlKey && e.key === 'Enter') {
         e.preventDefault();
         sendMessage();
     }
@@ -605,7 +604,7 @@ messageInput.addEventListener('keydown', function(e) {
 window.onload = function() {
     loadSavedKeys();
     updateSessionsList();
-    addMessage('CogOS', 'Cognitive Operating System initialized. Web V2.1 with Session Management. Ready for collaboration.');
+    addMessage('CogOS', 'Cognitive Operating System initialized. Web V2.1a with Session Management. Ready for collaboration.');
 };
 </script>
 </body>
