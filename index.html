@@ -52,7 +52,7 @@
 <h1>CogOS - Cognitive Operating System</h1>
 <div id="chat-container"></div>
 <div id="input-container">
-    <textarea id="text" id="message-input" placeholder="Enter your message...">
+    <input type="text" id="message-input" placeholder="Enter your message...">
     <button id="send-button">Send</button>
 </div>
     
@@ -591,8 +591,6 @@ if (currentSession.messages.length > 0) {
     }
 }
 
-    console.log('messageInput element:', messageInput); // Check if it exists
-
 // Event listeners
 sendButton.addEventListener('click', sendMessage);
 messageInput.addEventListener('keypress', function(e) {
@@ -603,7 +601,7 @@ messageInput.addEventListener('keypress', function(e) {
 window.onload = function() {
     loadSavedKeys();
     updateSessionsList();
-    addMessage('CogOS', 'Cognitive Operating System initialized. Web V2.1c with Session Management. Ready for collaboration.');
+    addMessage('CogOS', 'Cognitive Operating System initialized. Web V2.1 with Session Management. Ready for collaboration.');
 };
 </script>
 </body>
