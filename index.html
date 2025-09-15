@@ -8,32 +8,69 @@
         #input-container { margin-top: 10px; }
         #message-input { width: 70%; padding: 10px; }
         #send-button { padding: 10px 20px; }
+        #session-controls { background: #e8f4f8; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
+        .session-row { margin: 5px 0; }
     </style>
 </head>
 <body>
 <div id="api-setup" style="background: #f0f0f0; padding: 10px; margin-bottom: 20px;">
     <h3>API Configuration</h3>
-    <input type="password" id="claude-key" placeholder="Claude API Key (sk-ant-...)" style="width: 300px; margin: 5px;">
+    <input type="password" id="openrouter-key" placeholder="OpenRouter API Key" style="width: 300px; margin: 5px;">
     <input type="password" id="deepseek-key" placeholder="DeepSeek API Key" style="width: 300px; margin: 5px;">
     <select id="default-model" style="margin: 5px;">
-        <option value="claude">Claude (paid, best quality)</option>
+        <option value="qwen">Qwen (via OpenRouter, free)</option>
         <option value="deepseek">DeepSeek (free, good for analysis)</option>
     </select>
     <button onclick="saveKeys()">Save Keys</button>
     <button onclick="clearKeys()">Clear Keys</button>
     <div id="key-status"></div>
 </div>
-    <h1>CogOS - Cognitive Operating System</h1>
-    <div id="chat-container"></div>
-    <div id="input-container">
-        <input type="text" id="message-input" placeholder="Enter your message...">
-        <button id="send-button">Send</button>
+
+<div id="session-controls">
+    <h3>Session Management</h3>
+    <div class="session-row">
+        <input type="text" id="session-name" placeholder="Session name..." style="width: 200px; margin-right: 10px;">
+        <button onclick="createNewSession()">New Session</button>
+        <button onclick="saveCurrentSession()">Save Session</button>
     </div>
+    <div class="session-row">
+        <select id="session-list" style="width: 200px; margin-right: 10px;">
+            <option value="">Select a session...</option>
+        </select>
+        <button onclick="loadSelectedSession()">Load Session</button>
+        <button onclick="deleteSelectedSession()">Delete Session</button>
+    </div>
+    <div class="session-row">
+        <button onclick="exportSession()">Export Current</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importSession(event)">
+        <button onclick="document.getElementById('import-file').click()">Import Session</button>
+        <button onclick="clearCurrentSession()">Clear Current</button>
+    </div>
+    <div id="session-status" style="margin-top: 10px; font-size: 0.9em; color: #666;"></div>
+</div>
+
+<h1>CogOS - Cognitive Operating System</h1>
+<div id="chat-container"></div>
+<div id="input-container">
+    <input type="text" id="message-input" placeholder="Enter your message...">
+    <button id="send-button">Send</button>
+</div>
     
 <script>
 const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
+
+// Session Management
+let currentSession = {
+    id: null,
+    name: "New Session",
+    created: Date.now(),
+    lastModified: Date.now(),
+    messages: [],
+    cogosVersion: "v2.4",
+    activeModel: "deepseek"
+};
 
 // CogOS Core and Modules
 const cogosCore = `### COGNITIVE OS v2.4 - CORE KERNEL
@@ -147,10 +184,10 @@ Purpose: Fosters creativity and helps access non-linear insights for both partie
 
 // API Key management
 function saveKeys() {
-    const claudeKey = document.getElementById('claude-key').value;
+    const openrouterKey = document.getElementById('openrouter-key').value;
     const deepseekKey = document.getElementById('deepseek-key').value;
     
-    if (claudeKey) localStorage.setItem('claude-api-key', claudeKey);
+    if (openrouterKey) localStorage.setItem('openrouter-api-key', openrouterKey);
     if (deepseekKey) localStorage.setItem('deepseek-api-key', deepseekKey);
     
     document.getElementById('key-status').innerHTML = '<span style="color: green;">Keys saved locally</span>';
@@ -158,49 +195,51 @@ function saveKeys() {
 }
 
 function clearKeys() {
-    localStorage.removeItem('claude-api-key');
+    localStorage.removeItem('openrouter-api-key');
     localStorage.removeItem('deepseek-api-key');
     document.getElementById('key-status').innerHTML = '<span style="color: red;">Keys cleared</span>';
-    document.getElementById('claude-key').value = '';
+    document.getElementById('openrouter-key').value = '';
     document.getElementById('deepseek-key').value = '';
 }
 
 function loadSavedKeys() {
-    const claudeKey = localStorage.getItem('claude-api-key');
+    const openrouterKey = localStorage.getItem('openrouter-api-key');
     const deepseekKey = localStorage.getItem('deepseek-api-key');
     
-    if (claudeKey) document.getElementById('claude-key').value = '••••••••';
+    if (openrouterKey) document.getElementById('openrouter-key').value = '••••••••';
     if (deepseekKey) document.getElementById('deepseek-key').value = '••••••••';
 }
 
-// AI API Functions with CORS proxy
-async function callClaude(message, systemPrompt) {
-    const apiKey = localStorage.getItem('claude-api-key');
+// AI API Functions
+async function callQwen(message, systemPrompt) {
+    const apiKey = localStorage.getItem('openrouter-api-key');
     if (!apiKey) {
-        throw new Error('Claude API key not found');
+        throw new Error('OpenRouter API key not found');
     }
     
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01'
+            'Authorization': `Bearer ${apiKey}`,
+            'HTTP-Referer': window.location.href,
+            'X-Title': 'CogOS Chat Interface'
         },
         body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 1000,
-            system: systemPrompt,
-            messages: [{ role: 'user', content: message }]
+            model: 'qwen/qwen-2.5-72b-instruct',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message }
+            ]
         })
     });
     
     if (!response.ok) {
-        throw new Error(`Claude API error: ${response.status}`);
+        throw new Error(`Qwen API error: ${response.status}`);
     }
     
     const data = await response.json();
-    return data.content[0].text;
+    return data.choices[0].message.content;
 }
 
 async function callDeepSeek(message, systemPrompt) {
@@ -232,8 +271,211 @@ async function callDeepSeek(message, systemPrompt) {
     return data.choices[0].message.content;
 }
 
-// Add message to chat with proper formatting
-function addMessage(sender, message) {
+// Session Management Functions
+function generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function saveCurrentSession() {
+    const sessionName = document.getElementById('session-name').value.trim();
+    if (!sessionName) {
+        alert('Please enter a session name');
+        return;
+    }
+    
+    currentSession.name = sessionName;
+    currentSession.lastModified = Date.now();
+    
+    if (!currentSession.id) {
+        currentSession.id = generateSessionId();
+        currentSession.created = Date.now();
+    }
+    
+    localStorage.setItem(`cogos-session-${currentSession.id}`, JSON.stringify(currentSession));
+    updateSessionsList();
+    updateSessionStatus(`Session "${sessionName}" saved`);
+}
+
+function createNewSession() {
+    const sessionName = document.getElementById('session-name').value.trim() || 'New Session';
+    
+    // Save current session if it has messages
+    if (currentSession.messages.length > 0 && !currentSession.id) {
+        currentSession.id = generateSessionId();
+        currentSession.name = 'Unsaved Session';
+        localStorage.setItem(`cogos-session-${currentSession.id}`, JSON.stringify(currentSession));
+    }
+    
+    // Create new session
+    currentSession = {
+        id: generateSessionId(),
+        name: sessionName,
+        created: Date.now(),
+        lastModified: Date.now(),
+        messages: [],
+        cogosVersion: "v2.4",
+        activeModel: document.getElementById('default-model').value
+    };
+    
+    // Clear chat and reinitialize
+    chatContainer.innerHTML = '';
+    addMessage('CogOS', `Cognitive Operating System initialized. Session: ${sessionName}. Ready for collaboration.`);
+    
+    document.getElementById('session-name').value = sessionName;
+    updateSessionsList();
+    updateSessionStatus(`New session "${sessionName}" created`);
+}
+
+function loadSelectedSession() {
+    const sessionSelect = document.getElementById('session-list');
+    const sessionId = sessionSelect.value;
+    
+    if (!sessionId) {
+        alert('Please select a session to load');
+        return;
+    }
+    
+    const sessionData = localStorage.getItem(`cogos-session-${sessionId}`);
+    if (!sessionData) {
+        alert('Session not found');
+        return;
+    }
+    
+    currentSession = JSON.parse(sessionData);
+    
+    // Clear and rebuild chat
+    chatContainer.innerHTML = '';
+    currentSession.messages.forEach(msg => {
+        addMessage(msg.sender, msg.content);
+    });
+    
+    document.getElementById('session-name').value = currentSession.name;
+    document.getElementById('default-model').value = currentSession.activeModel || 'deepseek';
+    
+    updateSessionStatus(`Session "${currentSession.name}" loaded`);
+}
+
+function deleteSelectedSession() {
+    const sessionSelect = document.getElementById('session-list');
+    const sessionId = sessionSelect.value;
+    
+    if (!sessionId) {
+        alert('Please select a session to delete');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to delete this session?')) {
+        localStorage.removeItem(`cogos-session-${sessionId}`);
+        updateSessionsList();
+        updateSessionStatus('Session deleted');
+    }
+}
+
+function clearCurrentSession() {
+    if (confirm('Clear current conversation? (Unsaved changes will be lost)')) {
+        chatContainer.innerHTML = '';
+        currentSession.messages = [];
+        addMessage('CogOS', 'Cognitive Operating System initialized. Ready for collaboration.');
+        updateSessionStatus('Current session cleared');
+    }
+}
+
+function exportSession() {
+    if (currentSession.messages.length === 0) {
+        alert('No messages to export');
+        return;
+    }
+    
+    const exportData = {
+        ...currentSession,
+        exportedAt: new Date().toISOString(),
+        platform: 'CogOS Web Interface'
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cogos-session-${currentSession.name.replace(/[^a-z0-9]/gi, '_')}-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    updateSessionStatus('Session exported');
+}
+
+function importSession(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedSession = JSON.parse(e.target.result);
+            
+            // Validate session structure
+            if (!importedSession.messages || !importedSession.name) {
+                throw new Error('Invalid session file format');
+            }
+            
+            // Generate new ID to avoid conflicts
+            importedSession.id = generateSessionId();
+            importedSession.name = importedSession.name + ' (Imported)';
+            
+            // Save imported session
+            localStorage.setItem(`cogos-session-${importedSession.id}`, JSON.stringify(importedSession));
+            updateSessionsList();
+            updateSessionStatus(`Session "${importedSession.name}" imported`);
+            
+        } catch (error) {
+            alert('Error importing session: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    event.target.value = '';
+}
+
+function updateSessionsList() {
+    const sessionSelect = document.getElementById('session-list');
+    sessionSelect.innerHTML = '<option value="">Select a session...</option>';
+    
+    // Get all saved sessions
+    const sessions = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('cogos-session-')) {
+            try {
+                const session = JSON.parse(localStorage.getItem(key));
+                sessions.push(session);
+            } catch (e) {
+                // Skip invalid sessions
+            }
+        }
+    }
+    
+    // Sort by last modified (newest first)
+    sessions.sort((a, b) => b.lastModified - a.lastModified);
+    
+    // Add to dropdown
+    sessions.forEach(session => {
+        const option = document.createElement('option');
+        option.value = session.id;
+        option.textContent = `${session.name} (${new Date(session.lastModified).toLocaleDateString()})`;
+        sessionSelect.appendChild(option);
+    });
+}
+
+function updateSessionStatus(message) {
+    const statusDiv = document.getElementById('session-status');
+    statusDiv.textContent = message;
+    setTimeout(() => {
+        statusDiv.textContent = '';
+    }, 3000);
+}
+
+// Add message to chat with proper formatting and session tracking
+function addMessage(sender, message, model = null) {
     const messageDiv = document.createElement('div');
     messageDiv.style.marginBottom = '15px';
     messageDiv.style.whiteSpace = 'pre-wrap';
@@ -241,6 +483,18 @@ function addMessage(sender, message) {
     messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
     chatContainer.appendChild(messageDiv);
     chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // Add to session (except processing indicators)
+    if (sender !== 'CogOS' || !message.includes('🤔')) {
+        const messageObj = {
+            sender: sender,
+            content: message,
+            timestamp: Date.now(),
+            model: model
+        };
+        currentSession.messages.push(messageObj);
+        currentSession.lastModified = Date.now();
+    }
 }
 
 // Enhanced module detection
@@ -307,17 +561,18 @@ async function sendMessage() {
         
         // Choose model
         const defaultModel = document.getElementById('default-model').value;
+        currentSession.activeModel = defaultModel;
         let response;
         
-        if (defaultModel === 'claude') {
-            response = await callClaude(message, systemPrompt);
+        if (defaultModel === 'qwen') {
+            response = await callQwen(message, systemPrompt);
         } else {
             response = await callDeepSeek(message, systemPrompt);
         }
         
         // Remove thinking indicator and add real response
         chatContainer.removeChild(chatContainer.lastChild);
-        addMessage('AI', response);
+        addMessage('AI', response, defaultModel);
         
     } catch (error) {
         // Remove thinking indicator and show error
@@ -335,7 +590,8 @@ messageInput.addEventListener('keypress', function(e) {
 // Call this when page loads
 window.onload = function() {
     loadSavedKeys();
-    addMessage('CogOS', 'Cognitive Operating System initialized. Web V1_2a. Ready for collaboration.');
+    updateSessionsList();
+    addMessage('CogOS', 'Cognitive Operating System initialized. Web V2.0 with Session Management. Ready for collaboration.');
 };
 </script>
 </body>
