@@ -595,11 +595,8 @@ if (currentSession.messages.length > 0) {
 
 // Event listeners
 sendButton.addEventListener('click', sendMessage);
-messageInput.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.key === 'Enter') {
-        e.preventDefault();
-        sendMessage();
-    }
+messageInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') sendMessage();
 });
 
 // Call this when page loads
