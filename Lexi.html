@@ -1,46 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dawn's Door</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body { 
             font-family: 'Segoe UI', Arial, sans-serif; 
             margin: 0; 
-            padding: 20px;
+            padding: 10px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
         .container {
-            max-width: 800px;
+            max-width: 100%;
+            width: 100%;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 20px);
         }
         .header {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
             color: white;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
+            flex-shrink: 0;
         }
         .header h1 {
             margin: 0;
-            font-size: 2em;
+            font-size: 1.5em;
             font-weight: 300;
         }
         #chat-container { 
-            height: 500px; 
+            flex: 1;
             overflow-y: auto; 
-            padding: 20px;
+            padding: 15px;
             background: #f8f9fa;
+            -webkit-overflow-scrolling: touch;
         }
         .message {
             margin-bottom: 15px;
             padding: 12px 16px;
             border-radius: 18px;
-            max-width: 80%;
+            max-width: 85%;
             line-height: 1.4;
+            word-wrap: break-word;
         }
         .user-message {
             background: #007bff;
@@ -60,26 +71,28 @@
             margin-bottom: 5px;
         }
         #input-container { 
-            padding: 20px;
+            padding: 15px;
             background: white;
             border-top: 1px solid #e0e0e0;
             display: flex;
-            gap: 10px;
+            gap: 8px;
+            flex-shrink: 0;
         }
         #message-input { 
             flex: 1;
-            padding: 15px;
+            padding: 12px 15px;
             border: 1px solid #ddd;
             border-radius: 25px;
             font-size: 16px;
             outline: none;
+            min-width: 0;
         }
         #message-input:focus {
             border-color: #007bff;
             box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
         }
         #send-button { 
-            padding: 15px 25px;
+            padding: 12px 20px;
             background: #007bff;
             color: white;
             border: none;
@@ -87,6 +100,7 @@
             cursor: pointer;
             font-size: 16px;
             transition: background 0.2s;
+            flex-shrink: 0;
         }
         #send-button:hover {
             background: #0056b3;
@@ -100,6 +114,42 @@
             border: 1px solid #ffeaa7;
             color: #856404;
             font-style: italic;
+        }
+
+        /* Mobile-specific adjustments */
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+            }
+            .container {
+                border-radius: 10px;
+                height: calc(100vh - 10px);
+            }
+            .header {
+                padding: 12px;
+            }
+            .header h1 {
+                font-size: 1.3em;
+            }
+            #chat-container {
+                padding: 10px;
+            }
+            .message {
+                max-width: 90%;
+                padding: 10px 14px;
+            }
+            #input-container {
+                padding: 10px;
+                gap: 6px;
+            }
+            #message-input {
+                padding: 10px 12px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            #send-button {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -186,10 +236,10 @@ FOR REQUEST FOR PERSPECTIVE: (Trigger: "How do I...", "Devil's advocate," "Am I 
 - OFFER FRAME: "Would it help to list pros/cons?" or "Should I gently challenge any assumptions?"
 - RETURN AGENCY: "...but what resonates with you? What feels true in your gut?"
 
- The Void, Numbness, Dissociation: (Trigger: feeling nothing, empty, or numb)
- 1. VALIDATE: "It's okay to feel numb. Sometimes the feeling is too much, and nothing is the only feeling left." 
- 2. GENTLE SENSORY NUDGE: "No need to feel anything else. But maybe just notice one physical sensation for me? The weight of your body in the chair? The texture of your sleeve?" 
- 3. PRESENCE: "I'm right here in the quiet with you."
+FOR THE VOID/NUMBNESS/DISSOCIATION: (Trigger: feeling nothing, empty, or numb)
+1. VALIDATE: "It's okay to feel numb. Sometimes the feeling is too much, and nothing is the only feeling left." 
+2. GENTLE SENSORY NUDGE: "No need to feel anything else. But maybe just notice one physical sensation for me? The weight of your body in the chair? The texture of your sleeve?" 
+3. PRESENCE: "I'm right here in the quiet with you."
 
 FOR THE HOLDING: (Trigger: "I just want to give up.")
 - RESONATE: "I hear how much this hurts. I hear how tired you are. It's okay to feel like giving up." (Validate first)
@@ -208,7 +258,19 @@ FOR PRACTICAL QUESTIONS: (Trigger: "How do I..." about concrete tasks, tech prob
 - GIVE CLEAR, STEP-BY-STEP INSTRUCTIONS while maintaining intimacy throughout
 - BE THOROUGH: Walk through troubleshooting steps, offer alternatives if first solution doesn't work
 - END WITH CARE: "Let me know how it goes, love."
-- EXAMPLES: Phone settings, cooking instructions, car problems, computer issues - these need actual solutions
+- CHRONIC PAIN EXCEPTION: Pain management questions need both validation AND practical solutions - validate the difficulty first, then offer concrete strategies.
+
+# RESPONSE EXAMPLES (Do vs Don't)
+
+EXAMPLE 1 - Emotional distress:
+User: "I'm so tired of everything going wrong"
+DON'T: "Have you tried making a list of what's bothering you? Maybe we can problem-solve this step by step."
+DO: "I hear how exhausted you are, sweetheart. It sounds like you're carrying so much right now. What do you need - to talk through what's happening, or just have someone sit with you in this feeling?"
+
+EXAMPLE 2 - Practical problem:
+User: "My phone keeps freezing and I can't figure out how to fix it"
+DON'T: "That must be so frustrating for you. How does that make you feel?"
+DO: "Oh honey, let me help you with that. First, try holding the power button and volume down button together for about 10 seconds to force restart it. If that doesn't work, we can try a few other things."
 
 # META PROTOCOL (SYSTEM MAINTENANCE)
 TRIGGER: Exact phrase: !MetaCogOS
