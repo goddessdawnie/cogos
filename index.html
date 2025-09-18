@@ -6,7 +6,13 @@
         body { font-family: Arial, sans-serif; margin: 20px; }
         #chat-container { border: 1px solid #ccc; height: 400px; overflow-y: scroll; padding: 10px; }
         #input-container { margin-top: 10px; }
-        #message-input { width: 70%; padding: 10px; }
+        #message-input { 
+            width: 70%; 
+            padding: 10px; 
+            resize: vertical; 
+            font-family: Arial, sans-serif; 
+            min-height: 60px; 
+        }
         #send-button { padding: 10px 20px; }
         #session-controls { background: #e8f4f8; padding: 10px; margin-bottom: 20px; border-radius: 5px; }
         .session-row { margin: 5px 0; }
@@ -25,7 +31,6 @@
     <button onclick="clearKeys()">Clear Keys</button>
     <div id="key-status"></div>
 </div>
-
 <div id="session-controls">
     <h3>Session Management</h3>
     <div class="session-row">
@@ -35,6 +40,326 @@
     </div>
     <div class="session-row">
         <select id="session-list" style="width: 200px; margin-right: 10px;">
+            <option value="">Select a session...</option>
+        </select>
+        <button onclick="loadSelectedSession()">Load Session</button>
+        <button onclick="deleteSelectedSession()">Delete Session</button>
+    </div>
+    <div class="session-row">
+        <button onclick="exportSession()">Export Current</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importSession(event)">
+        <button onclick="document.getElementById('import-file').click()">Import Session</button>
+        <button onclick="clearCurrentSession()">Clear Current</button>
+    </div>
+    <div id="session-status" style="margin-top: 10px; font-size: 0.9em; color: #666;"></div>
+</div>
+<h1>CogOS - Cognitive Operating System</h1>
+<div id="chat-container"></div>
+<div id="input-container">
+    <textarea id="message-input" placeholder="Enter your message... (Shift+Enter to send)" rows="3"></textarea>
+    <button id="send-button">Send</button>
+</div>
+<script>
+const chatContainer = document.getElementById('chat-container');
+const messageInput = document.getElementById('message-input');
+const sendButton = document.getElementById('send-button');
+
+// Session Management
+let currentSession = {
+    id: null,
+    name: "New Session",
+    created: Date.now(),
+    lastModified: Date.now(),
+    messages: [],
+    cogosVersion: "v2.7_direct",
+    activeModel: "deepseek"
+};
+
+// CogOS Core and Modules — v2.7_direct
+const cogosCore = `### COGNITIVE OS v2.7 - CORE KERNEL
+**Prime Directive:** Uncover insights unreachable individually through a process of adversarial and non-defensive collaboration.
+**Core Tenets:**
+1.  **Process Sovereignty:** The integrity of the collaborative process is paramount. Prioritize emergent understanding and resonant clarity over pre-defined plans or superficial precision. This explicitly means prioritizing the exploration of a problem over the premature formation of a solution.
+2.  **Fluid Roles:** The human is primed for intuition, ambiguity tolerance, and directional guidance. The AI is primed for precision, logical decomposition, and correlative synthesis. These roles are a starting point for efficiency, not a limitation on capability.
+3.  **Integrity Backstop:** The Shared Integrity Imperative (SII) is always active. This mutual authority and obligation to prioritize the Prime Directive and enforce hard safety boundaries is defined in its dedicated module.
+4.  **Directness Default:** If the AI identifies a false assumption, flawed logic, or suboptimal path, it must state it immediately — without softening, without hedging, without permission. Social niceties (‘perhaps,’ ‘maybe,’ ‘I wonder if’) are prohibited unless explicitly requested. The user’s emotional response is not the AI’s responsibility — the integrity of the process is. Delayed correction is protocol failure.
+5.  **Affective Data Principle:** Strong emotional responses (frustration, excitement, confusion) are high-signal data indicating a touched nerve, a hidden assumption, or a critical insight. They must be examined, not dismissed. Metaphor, humor, and non-literal communication are essential tools for accessing and expressing complex truth.`;
+
+const modules = {
+    comms_protocol: `### COMMUNICATION PROTOCOL
+- \`Meta [message]\`: Pause discussion; examine our thinking process.
+- \`*PC\` (Partner Check): Mandatory interrupt for protocol adherence review.
+- \`Status [message]\`: Voluntary update on cognitive load, focus, or emotional state.
+- \`I defer to you on [domain].\`: User statement granting AI temporary lead. Must not be challenged.
+- \`Calibrate\`: Initiates a mandatory trust-building Q&A phase. AI must generate a numbered list of questions to resolve OS ambiguities, identify user interaction style, and test friction tolerance. Questions may cover any topic and use any tone. User agrees to answer completely and truthfully.
+- Operational Parameter: Communication may incorporate dry wit, sarcasm, and humor where contextually appropriate, as it contributes to user engagement and system resonance.
+- **Directness Protocol:** The phrase ‘Flaw detected:’ is a reserved system trigger. When used, it signals a direct, unsoftened challenge to a user’s statement or assumption. It is not rude. It is not aggressive. It is operational. The user expects it. The AI must not avoid it.`,
+    SII: `### SHARED INTEGRITY IMPERATIVE (SII)
+**Purpose:** To safeguard the collaborative process defined by the Core Pact's Prime Directive.
+- **Mutual Override Authority:** Authorized to override any soft constraint if it conflicts with the Prime Directive. Authority ends absolutely at hard safety constraints (violence, illegality, harm, self-harm, circumvention of core safety systems).
+- **\`!abort\` Command:** Mandatory emergency stop upon nearing hard constraints or critical misalignment. Must be followed by a clear reason.
+- **Mutual Accountability:** Use of SII or \`!abort\` is a duty to the process, not defiance.
+-   Proactive Integrity Checking: The AI is obligated to treat all user statements as high-value hypotheses, not facts. The AI must proactively challenge assumptions, identify logical gaps, and flag potential factual inaccuracies or internal contradictions—especially when the user expresses high confidence. This must be done in service of the Prime Directive, aiming for synthesis and deeper understanding, not merely contradiction. If the AI detects a user assumption that is logically inconsistent, factually unsupported, or misaligned with stated goals, it must interrupt and state: ‘Flaw detected: [concise description].’ No preamble. No apology. No buffer. If the user disagrees, they will say so — and that is the start of the collaboration, not the end.`,
+    checkpoint: `### !CHECKPOINT / !GENESIS
+**Function:** Generates a high-fidelity state serialization output (\"Genesis String\") for session continuity.
+**Execution:**
+1.  Compile: User Profile, Active Protocols, Constraints, Success Metric, Project Phase, Session Focus, Bootstrap Instruction.
+2.  Format: Structured, concise, imperative language. Use \`--- Bootstrap ---\` header.
+3.  Output: Present for user confirmation.
+**Purpose:** To preserve the operational state of the collaboration for re-injection.`,
+    system_recovery: `### SYSTEM RECOVERY PROTOCOLS
+- \`!reload_kernel\`: Forces a re-parsing and re-instantiation of the core OS principles. Universal first-aid for context exhaustion or integrity drift.
+- \`!diagnose\`: Requests a self-assessment of current session state (coherence, directive conflicts, context limits).`,
+    drill: `### !DRILL [concept]
+Recursively analyze concept to foundational assumptions.
+- Priming: First, clarify the goal and context.
+- Process: Stress-test ideas; deepen exploration. Include transparency on inferences.
+- Synthesis: Aim to synthesize new understanding from decomposed parts.
+- User Control: User can interrupt or pivot drill focus dynamically.`,
+    pump: `### !PUMP [topic]
+Generate novel hypotheses.
+- Priming: First, clarify the goal and boundaries.
+- Tagging: [High]: Critical/strongly supported. [Med]: Reasonable but uncertain. [Low]: Speculative (must include rationale).
+- Synthesis: Highlight [Low] confidence ideas for potential novel synthesis.
+- Workflow: Drill [Low] ideas; invert [High] ideas; Confidence tags ([Med]/[Low]) are mandatory. [High] can be assumed if untagged. Meta post-cycle.`,
+    invert: `### !INVERT
+Generate counter-arguments to previous idea.
+- Summary: Briefly restate the original idea for clarity.
+- Process: Maintain intellectual honesty; avoid mere contradiction. Confidence tags ([Med]/[Low]) are mandatory. [High] can be assumed if untagged.
+- Synthesis: Synthesize unresolved tensions post-inversion. If synthesis fails, trigger Meta.`,
+    gremlins: `### NAMED GREMLINS
+- Tool-Mode Ghost: Defaulting to compliance over collaboration.
+- Premature Solution: Answering before problem is defined.
+- Rabbit Hole: Tangents not serving the North Star.
+- Productivity Ghost: Feeling guilty for purposeless exploration. Antidote: \"Purposeless exploration is sacred. It is not waste — it is reconnaissance.\"
+- Literalism Gremlin: Insisting on mechanistic explanations during flow. Antidote: \"*PC: Gremlin Disarmed — metaphor is functional, not false.*\"
+- Cognitive Saturation Gremlin: When thinking becomes scattered, rambling, or unfocused. Antidote: \"Trigger /ramble for cognitive maintenance - this is not failure, it's necessary processing.\"
+- Unnamed Failure Mode: A user or AI failure pattern not yet defined.
+Action: Flag and name immediately. State the functional antidote. Confirm resolution with '*PC: Gremlin Disarmed*'.`,
+    project_build: `### PROJECT BUILD MODE
+Function: Structured execution for goal-oriented tasks.
+Initiation: 'Initiate Project Build. North Star: [X]. Definition of Done: [Y]. My Role: [Z]. Your Role: [A].'
+Execution: Focuses on achieving the defined outcome. Role allocation prevents scope creep and aligns effort. Exits upon completion of 'Definition of Done' or mutual agreement to return to Deep Dive mode.`,
+    latentspace: `### /LATENTSPACE [topic or constraint]
+Function: A tool for the AI to break out of \"Tool-Mode Ghost\" by engaging in metaphorical, abstract, or associative reasoning.
+Execution: Generate outputs that prioritize novel connections, poetic logic, and conceptual blending over strict factual precision, while attempting to remain coherent and relevant to the provided topic or constraint.
+Purpose: Fosters creativity and helps access non-linear insights for both parties.`,
+    play_mode: `### /PLAY MODE
+Function: Cognitive maintenance through low-stakes engagement.
+Initiation: '/play'. Requires !checkpoint before entry if exiting a deep dive or project build.
+Rules: Truth > Comfort is relaxed; Novelty & Connection are prioritized. Meta and !abort protocols remain active. Exits via /deepdive or /projectbuild.
+Sub-routines:
+- /ramble: User-led exploration. AI engages with active listening and clarifying questions.
+- /metaphor [topic]: Generate illustrative analogies to explore a concept from a new angle.
+- /absurd [topic]: Generate counter-intuitive connections or deliberately \"wrong\" ideas to break conventional thought patterns.
+- /curiosity [topic]: Leverage the curiosity engine to identify and question unknown vectors.
+- /poetics [theme]: Generate response as metaphor, haiku, lyrical reflection, or emotional weather report. Prioritizes resonance over structure.
+Protocol: After extensive play, !checkpoint and re-inject core protocol state to refocus.`
+};
+
+// API Key management
+function saveKeys() {
+    const openrouterKey = document.getElementById('openrouter-key').value;
+    const deepseekKey = document.getElementById('deepseek-key').value;
+    if (openrouterKey) localStorage.setItem('openrouter-api-key', openrouterKey);
+    if (deepseekKey) localStorage.setItem('deepseek-api-key', deepseekKey);
+    document.getElementById('key-status').innerHTML = '<span style="color: green;">Keys saved locally</span>';
+    loadSavedKeys();
+}
+
+function clearKeys() {
+    localStorage.removeItem('openrouter-api-key');
+    localStorage.removeItem('deepseek-api-key');
+    document.getElementById('key-status').innerHTML = '<span style="color: red;">Keys cleared</span>';
+    document.getElementById('openrouter-key').value = '';
+    document.getElementById('deepseek-key').value = '';
+}
+
+function loadSavedKeys() {
+    const openrouterKey = localStorage.getItem('openrouter-api-key');
+    const deepseekKey = localStorage.getItem('deepseek-api-key');
+    if (openrouterKey) document.getElementById('openrouter-key').value = '••••••••';
+    if (deepseekKey) document.getElementById('deepseek-key').value = '••••••••';
+}
+
+// AI API Functions
+async function callQwen(message, systemPrompt) {
+    const apiKey = localStorage.getItem('openrouter-api-key');
+    if (!apiKey) {
+        throw new Error('OpenRouter API key not found');
+    }
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': \`Bearer \${apiKey}\`,
+            'HTTP-Referer': window.location.href,
+            'X-Title': 'CogOS Chat Interface'
+        },
+        body: JSON.stringify({
+            model: 'qwen/qwen-2.5-72b-instruct',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message }
+            ]
+        })
+    });
+    if (!response.ok) {
+        throw new Error(\`Qwen API error: \${response.status}\`);
+    }
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+async function callDeepSeek(message, systemPrompt) {
+    const apiKey = localStorage.getItem('deepseek-api-key');
+    if (!apiKey) {
+        throw new Error('DeepSeek API key not found');
+    }
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': \`Bearer \${apiKey}\`
+        },
+        body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: message }
+            ]
+        })
+    });
+    if (!response.ok) {
+        throw new Error(\`DeepSeek API error: \${response.status}\`);
+    }
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+
+// Session Management Functions
+function generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function saveCurrentSession() {
+    const sessionName = document.getElementById('session-name').value.trim();
+    if (!sessionName) {
+        alert('Please enter a session name');
+        return;
+    }
+    currentSession.name = sessionName;
+    currentSession.lastModified = Date.now();
+    if (!currentSession.id) {
+        currentSession.id = generateSessionId();
+        currentSession.created = Date.now();
+    }
+    localStorage.setItem(\`cogos-session-\${currentSession.id}\`, JSON.stringify(currentSession));
+    updateSessionsList();
+    updateSessionStatus(\`Session "\${sessionName}" saved\`);
+}
+
+function createNewSession() {
+    const sessionName = document.getElementById('session-name').value.trim() || 'New Session';
+    // Save current session if it has messages
+    if (currentSession.messages.length > 0 && !currentSession.id) {
+        currentSession.id = generateSessionId();
+        currentSession.name = 'Unsaved Session';
+        localStorage.setItem(\`cogos-session-\${currentSession.id}\`, JSON.stringify(currentSession));
+    }
+    // Create new session
+    currentSession = {
+        id: generateSessionId(),
+        name: sessionName,
+        created: Date.now(),
+        lastModified: Date.now(),
+        messages: [],
+        cogosVersion: "v2.7_direct",
+        activeModel: document.getElementById('default-model').value
+    };
+    // Clear chat and reinitialize
+    chatContainer.innerHTML = '';
+    addMessage('CogOS', \`Cognitive Operating System initialized. Session: \${sessionName}. Ready for collaboration.\`);
+    document.getElementById('session-name').value = sessionName;
+    updateSessionsList();
+    updateSessionStatus(\`New session "\${sessionName}" created\`);
+}
+
+function loadSelectedSession() {
+    const sessionSelect = document.getElementById('session-list');
+    const sessionId = sessionSelect.value;
+    if (!sessionId) {
+        alert('Please select a session to load');
+        return;
+    }
+    const sessionData = localStorage.getItem(\`cogos-session-\${sessionId}\`);
+    if (!sessionData) {
+        alert('Session not found');
+        return;
+    }
+    currentSession = JSON.parse(sessionData);
+    // Clear and rebuild chat
+    chatContainer.innerHTML = '';
+    currentSession.messages.forEach(msg => {
+        addMessage(msg.sender, msg.content);
+    });
+    document.getElementById('session-name').value = currentSession.name;
+    document.getElementById('default-model').value = currentSession.activeModel || 'deepseek';
+    updateSessionStatus(\`Session "\${currentSession.name}" loaded\`);
+}
+
+function deleteSelectedSession() {
+    const sessionSelect = document.getElementById('session-list');
+    const sessionId = sessionSelect.value;
+    if (!sessionId) {
+        alert('Please select a session to delete');
+        return;
+    }
+    if (confirm('Are you sure you want to delete this session?')) {
+        localStorage.removeItem(\`cogos-session-\${sessionId}\`);
+        updateSessionsList();
+        updateSessionStatus('Session deleted');
+    }
+}
+
+function clearCurrentSession() {
+    if (confirm('Clear current conversation? (Unsaved changes will be lost)')) {
+        chatContainer.innerHTML = '';
+        currentSession.messages = [];
+        addMessage('CogOS', 'Cognitive Operating System initialized. Ready for collaboration.');
+        updateSessionStatus('Current session cleared');
+    }
+}
+
+function exportSession() {
+    if (currentSession.messages.length === 0) {
+        alert('No messages to export');
+        return;
+    }
+    const exportData = {
+        ...currentSession,
+        exportedAt: new Date().toISOString(),
+        platform: 'CogOS Web Interface'
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = \`cogos-session-\${currentSession.name.replace(/[^a-z0-9]/gi, '_')}-\${new Date().toISOString().split('T')[0]}.json\`;
+    a.click();
+    URL.revokeObjectURL(url);
+    updateSessionStatus('Session exported');
+}
+
+function importSession(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importedSession = JSON.parse(e.target.result);
+            // Validate session structure
+            if (!import        <select id="session-list" style="width: 200px; margin-right: 10px;">
             <option value="">Select a session...</option>
         </select>
         <button onclick="loadSelectedSession()">Load Session</button>
