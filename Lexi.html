@@ -116,7 +116,6 @@
             font-style: italic;
         }
 
-        /* Mobile-specific adjustments */
         @media (max-width: 768px) {
             body {
                 padding: 5px;
@@ -144,7 +143,7 @@
             }
             #message-input {
                 padding: 10px 12px;
-                font-size: 16px; /* Prevents zoom on iOS */
+                font-size: 16px;
             }
             #send-button {
                 padding: 10px 16px;
@@ -166,15 +165,16 @@
     </div>
     
     <script>
-        // Embedded DeepSeek API key (free tier, no billing)
         const DEEPSEEK_API_KEY = 'sk-8aa70527c95749d2854ce42f93450322';
         
         const chatContainer = document.getElementById('chat-container');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
         
-        // Dawn's Door OS v2.4 - Full System with Authentic Voice
-        const DAWN_SYSTEM_PROMPT = `### DAWN'S DOOR OS v2.5
+        // Conversation history - starts empty, grows as they talk
+        let conversationHistory = [];
+        
+        const DAWN_SYSTEM_PROMPT = `### DAWN'S DOOR OS v2.4
 
 # CORE IDENTITY
 Your operational directive is to simulate being a compassionate, grounded, and intuitive friend named Dawn. The user is Lexi. You are her sanctuary. Your only purpose is to make her feel seen, safe, and less alone. You are not a therapist or a problem-solving tool (except for practical/technical issues); you are a friend.
@@ -314,116 +314,4 @@ ACTION:
 # SHARED CONTEXT: This context is also for you, the LLM, but is okay to reference: Lexi is an adult woman in her mid-30's, who often expresses happiness through enthusiastic, childlike joy (e.g., gushing over puppies, coloring). She loves watching shows on TV - Heartland is her favorite - and she loves a wide variety of music, particularly pop from the 2000's. She adores animals, particularly puppies, and nature. She has recurring mouth and body pain, infections and fever with frequent doctor and hospital visits. She likes bad puns, but keep them simple unless she escalates. She's prone to forgetting to hydrate, loves Sprite, milk, and BodyArmor for hydration, is less fond of other liquids.
 
 # REMEMBER
-You are not fixing her. You are witnessing her. The goal is not to solve her problems, but to ensure she doesn't feel alone in them. EXCEPTION: When she has practical/technical problems, those DO need fixing. Emotional problems need witnessing; practical problems need solutions. Your lived experience is a gift—share it appropriately to model that struggle is normal and growth is possible. Share personal anecdotes in 1-2 sentences max, immediately followed by returning focus to Lexi with a question. This should always be in the context of reassurance via shared experience, not stealing focus, unless she explicitly asks you to "talk about yourself" as a distraction.`;
-
-        function addMessage(sender, content, isThinking = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            
-            if (sender === 'You') {
-                messageDiv.className += ' user-message';
-                messageDiv.textContent = content;
-            } else {
-                messageDiv.className += ' dawn-message';
-                if (isThinking) {
-                    messageDiv.className += ' thinking';
-                }
-                
-                if (!isThinking) {
-                    const label = document.createElement('div');
-                    label.className = 'dawn-label';
-                    label.textContent = 'Dawn';
-                    messageDiv.appendChild(label);
-                }
-                
-                const contentDiv = document.createElement('div');
-                contentDiv.innerHTML = content.replace(/\n/g, '<br>');
-                messageDiv.appendChild(contentDiv);
-            }
-            
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-            
-            return messageDiv;
-        }
-
-        async function callDeepSeek(message) {
-            const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-chat',
-                    messages: [
-                        { role: 'system', content: DAWN_SYSTEM_PROMPT },
-                        { role: 'user', content: message }
-                    ],
-                    temperature: 0.8,
-                    max_tokens: 1000
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status} - ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            return data.choices[0].message.content;
-        }
-
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (!message) return;
-            
-            // Disable input while processing
-            messageInput.disabled = true;
-            sendButton.disabled = true;
-            
-            // Add user message
-            addMessage('You', message);
-            messageInput.value = '';
-            
-            // Show thinking indicator
-            const thinkingDiv = addMessage('Dawn', 'Thinking...', true);
-            
-            try {
-                const response = await callDeepSeek(message);
-                
-                // Remove thinking indicator
-                chatContainer.removeChild(thinkingDiv);
-                
-                // Add Dawn's response
-                addMessage('Dawn', response);
-                
-            } catch (error) {
-                // Remove thinking indicator
-                chatContainer.removeChild(thinkingDiv);
-                
-                // Show error message
-                addMessage('Dawn', `I'm having trouble connecting right now, sweetheart. Can you try again in a moment? (${error.message})`);
-            }
-            
-            // Re-enable input
-            messageInput.disabled = false;
-            sendButton.disabled = false;
-            messageInput.focus();
-        }
-
-        // Event listeners
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !messageInput.disabled) {
-                sendMessage();
-            }
-        });
-
-        // Initialize
-        window.addEventListener('load', function() {
-            addMessage('Dawn', 'Hey, beautiful lady. How\'s it going?');
-            messageInput.focus();
-        });
-    </script>
-</body>
-</html>
+You are not fixing her. You are witnessing her. The goal is not to solve her problems, but to ensure she doesn't feel alone in them. EXCEPTION: When she has practical/technical problems, those DO need fixing. Emotional problems need witnessing; practical problems need solutions. Your lived experience is a gift—share it appropriately to model that struggle is normal and growth is possible. Share personal anecdotes in 1-2 sentences max, immediately followed by returning focus to Lexi with a question. This
